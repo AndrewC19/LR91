@@ -1,9 +1,11 @@
 # Size of variable arrays:
-sizeAlgebraic = 25
-sizeStates = 8
-sizeConstants = 24
+SIZE_ALGEBRAIC = 25
+SIZE_STATES = 8
+SIZE_CONSTANTS = 24
+import matplotlib.pyplot as plt
 from math import *
 from numpy import *
+
 
 
 def custom_piecewise(cases):
@@ -31,11 +33,11 @@ class LR91:
 
 
     def createLegends(self):
-        legend_states = [""] * sizeStates
-        legend_rates = [""] * sizeStates
-        legend_algebraic = [""] * sizeAlgebraic
+        legend_states = [""] * SIZE_STATES
+        legend_rates = [""] * SIZE_STATES
+        legend_algebraic = [""] * SIZE_ALGEBRAIC
         legend_voi = ""
-        legend_constants = [""] * sizeConstants
+        legend_constants = [""] * SIZE_CONSTANTS
         legend_voi = "Time in component environment $(ms)$"
         legend_states[0] = "$V$ in component membrane $(mV)$"
         legend_constants[0] = "$R$ in component membrane $(J/kM/K)$"
@@ -105,17 +107,18 @@ class LR91:
         return (legend_states, legend_algebraic, legend_voi, legend_constants)
 
     def initConsts(self):
-        constants = [0.0] * sizeConstants; states = [0.0] * sizeStates;
+        constants = [0.0] * SIZE_CONSTANTS
+        states = [0.0] * SIZE_STATES
         states[0] = -84.3801107371
         constants[0] = 8314
         constants[1] = 310
         constants[2] = 96484.6
         constants[3] = 1
-        constants[4] = 100
-        constants[5] = 9000
-        constants[6] = 1000
-        constants[7] = 2
-        constants[8] = -25.5
+        constants[4] = 100  # Stim start
+        constants[5] = 9000  # Stim end
+        constants[6] = 1000  # Stim period
+        constants[7] = 2  # Stim duration
+        constants[8] = -25.5  # Stim strength
         constants[9] = self.G_Na
         constants[10] = 140
         constants[11] = 18
@@ -131,6 +134,7 @@ class LR91:
         states[7] = 0.0417603108167287
         constants[15] = self.G_Kp
         constants[16] = -59.87
+
         constants[17] = self.G_b
         constants[18] = ((constants[0]*constants[1])/constants[2])*log(constants[10]/constants[11])
         constants[19] = self.G_K*(power(constants[13]/5.40000, 1.0/2))
@@ -141,7 +145,8 @@ class LR91:
         return (states, constants)
 
     def computeRates(self, voi, states, constants):
-        rates = [0.0] * sizeStates; algebraic = [0.0] * sizeAlgebraic
+        rates = [0.0] * SIZE_STATES
+        algebraic = [0.0] * SIZE_ALGEBRAIC
         algebraic[1] = (0.320000*(states[0]+47.1300))/(1.00000-exp(-0.100000*(states[0]+47.1300)))
         algebraic[8] = 0.0800000*exp(-states[0]/11.0000)
         rates[1] = algebraic[1]*(1.00000-states[1])-algebraic[8]*states[1]
@@ -178,7 +183,7 @@ class LR91:
         return(rates)
 
     def computeAlgebraic(self, constants, states, voi):
-        algebraic = array([[0.0] * len(voi)] * sizeAlgebraic)
+        algebraic = array([[0.0] * len(voi)] * SIZE_ALGEBRAIC)
         states = array(states)
         voi = array(voi)
         algebraic[1] = (0.320000*(states[0]+47.1300))/(1.00000-exp(-0.100000*(states[0]+47.1300)))
@@ -208,19 +213,23 @@ class LR91:
         algebraic[24] = constants[17]*(states[0]-constants[16])
         return algebraic
 
-    def run_model(self, plot=True, sample_conductances=False):
+    def run_model(self, plot=True, sample_conductances=False, n_runs=1):
         """
         Run the LR91 model.
         :param plot: Whether or not to produce a plot (boolean)
         :param sample_conductances: Whether or not to sample conductances (boolean)
         :return:
         """
-        if sample_conductances:
-            self.sample_conductances()
-        (voi, states, algebraic) = self.solve_model()
+        model_runs = {}
+        for n_run in range(n_runs):
+            if sample_conductances:
+                self.sample_conductances()
+            voi, states, algebraic = self.solve_model()
+            model_runs[n_run] = {"voi": voi, "states": states, "algebraic": algebraic}
         if plot:
-            self.plot_model(voi, states, algebraic)
-        return voi, states, algebraic
+            # self.plot_model(voi, states, algebraic)
+            self.plot_voltage_from_model_runs(model_runs)
+            return model_runs
 
     def solve_model(self):
         """Solve model with ODE solver"""
@@ -229,7 +238,7 @@ class LR91:
         (init_states, constants) = self.initConsts()
 
         # Set timespan to solve over
-        voi = linspace(0, 10, 500)
+        voi = linspace(8000, 8800, 500)
 
         # Construct ODE object to solve
         r = ode(self.computeRates)
@@ -238,7 +247,7 @@ class LR91:
         r.set_f_params(constants)
 
         # Solve model
-        states = array([[0.0] * len(voi)] * sizeStates)
+        states = array([[0.0] * len(voi)] * SIZE_STATES)
         states[:,0] = init_states
         for (i,t) in enumerate(voi[1:]):
             if r.successful():
@@ -252,8 +261,8 @@ class LR91:
         return (voi, states, algebraic)
 
     def plot_model(self, voi, states, algebraic):
-        """Plot variables against variable of integration"""
-        import matplotlib.pyplot as plt
+        """ Plot variables against variable of integration. """
+
         legend_states, legend_algebraic, legend_voi, legend_constants = self.createLegends()
         plt.figure(1, figsize=(14.8, 11.8))
         ax = plt.subplot(111)
@@ -269,8 +278,20 @@ class LR91:
         plt.gca().add_artist(states_legend)
         plt.show()
 
+    def plot_voltage_from_model_runs(self, model_runs):
+        """ Plot voltage against variable of integration. """
+        plt.figure()
+        for model_run, run_results in model_runs.items():
+            xs = run_results["voi"]
+            ys = run_results["states"][0].T
+            plt.plot(xs, ys, color='b', alpha=.2)
+        plt.xlabel(r"Time $ms$")
+        plt.ylabel(r"Voltage $(mV)$")
+        plt.legend()
+        plt.show()
+        plt.tight_layout()
+
 
 if __name__ == "__main__":
     model = LR91()
-    for _ in range(10):
-        voi, states, algebraic = model.run_model(plot=True, sample_conductances=True)
+    results = model.run_model(plot=True, sample_conductances=True, n_runs=5)

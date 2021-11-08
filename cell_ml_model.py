@@ -4,7 +4,6 @@ sizeStates = 8
 sizeConstants = 24
 from math import *
 from numpy import *
-from generate_values import *
 
 
 def custom_piecewise(cases):
@@ -23,12 +22,12 @@ class LR91:
         self.G_b = 0.03921
 
     def sample_conductances(self):
-        self.G_Na = np.random.uniform(17.250, 28.750)
-        self.G_si = np.random.uniform(0.0675, 0.1125)
-        self.G_K = np.random.uniform(0.2115, 0.3525)
-        self.G_K1 = np.random.uniform(0.4535, 0.7559)
-        self.G_Kp = np.random.uniform(0.0137, 0.0229)
-        self.G_b = np.random.uniform(0.0294, 0.0490)
+        self.G_Na = random.uniform(17.250, 28.750)
+        self.G_si = random.uniform(0.0675, 0.1125)
+        self.G_K = random.uniform(0.2115, 0.3525)
+        self.G_K1 = random.uniform(0.4535, 0.7559)
+        self.G_Kp = random.uniform(0.0137, 0.0229)
+        self.G_b = random.uniform(0.0294, 0.0490)
 
 
     def createLegends(self):
@@ -37,72 +36,72 @@ class LR91:
         legend_algebraic = [""] * sizeAlgebraic
         legend_voi = ""
         legend_constants = [""] * sizeConstants
-        legend_voi = "time in component environment (millisecond)"
-        legend_states[0] = "V in component membrane (millivolt)"
-        legend_constants[0] = "R in component membrane (joule_per_kilomole_kelvin)"
-        legend_constants[1] = "T in component membrane (kelvin)"
-        legend_constants[2] = "F in component membrane (coulomb_per_mole)"
-        legend_constants[3] = "C in component membrane (microF_per_cm2)"
-        legend_algebraic[0] = "I_stim in component membrane (microA_per_cm2)"
-        legend_algebraic[7] = "i_Na in component fast_sodium_current (microA_per_cm2)"
-        legend_algebraic[15] = "i_si in component slow_inward_current (microA_per_cm2)"
-        legend_algebraic[17] = "i_K in component time_dependent_potassium_current (microA_per_cm2)"
-        legend_algebraic[21] = "i_K1 in component time_independent_potassium_current (microA_per_cm2)"
-        legend_algebraic[23] = "i_Kp in component plateau_potassium_current (microA_per_cm2)"
-        legend_algebraic[24] = "i_b in component background_current (microA_per_cm2)"
-        legend_constants[4] = "stim_start in component membrane (millisecond)"
-        legend_constants[5] = "stim_end in component membrane (millisecond)"
-        legend_constants[6] = "stim_period in component membrane (millisecond)"
-        legend_constants[7] = "stim_duration in component membrane (millisecond)"
-        legend_constants[8] = "stim_amplitude in component membrane (microA_per_cm2)"
-        legend_constants[9] = "g_Na in component fast_sodium_current (milliS_per_cm2)"
-        legend_constants[18] = "E_Na in component fast_sodium_current (millivolt)"
-        legend_constants[10] = "Nao in component ionic_concentrations (millimolar)"
-        legend_constants[11] = "Nai in component ionic_concentrations (millimolar)"
-        legend_states[1] = "m in component fast_sodium_current_m_gate (dimensionless)"
-        legend_states[2] = "h in component fast_sodium_current_h_gate (dimensionless)"
-        legend_states[3] = "j in component fast_sodium_current_j_gate (dimensionless)"
-        legend_algebraic[1] = "alpha_m in component fast_sodium_current_m_gate (per_millisecond)"
-        legend_algebraic[8] = "beta_m in component fast_sodium_current_m_gate (per_millisecond)"
-        legend_algebraic[2] = "alpha_h in component fast_sodium_current_h_gate (per_millisecond)"
-        legend_algebraic[9] = "beta_h in component fast_sodium_current_h_gate (per_millisecond)"
-        legend_algebraic[3] = "alpha_j in component fast_sodium_current_j_gate (per_millisecond)"
-        legend_algebraic[10] = "beta_j in component fast_sodium_current_j_gate (per_millisecond)"
-        legend_algebraic[14] = "E_si in component slow_inward_current (millivolt)"
-        legend_states[4] = "Cai in component intracellular_calcium_concentration (millimolar)"
-        legend_states[5] = "d in component slow_inward_current_d_gate (dimensionless)"
-        legend_states[6] = "f in component slow_inward_current_f_gate (dimensionless)"
-        legend_algebraic[4] = "alpha_d in component slow_inward_current_d_gate (per_millisecond)"
-        legend_algebraic[11] = "beta_d in component slow_inward_current_d_gate (per_millisecond)"
-        legend_algebraic[5] = "alpha_f in component slow_inward_current_f_gate (per_millisecond)"
-        legend_algebraic[12] = "beta_f in component slow_inward_current_f_gate (per_millisecond)"
-        legend_constants[19] = "g_K in component time_dependent_potassium_current (milliS_per_cm2)"
-        legend_constants[20] = "E_K in component time_dependent_potassium_current (millivolt)"
-        legend_constants[12] = "PR_NaK in component time_dependent_potassium_current (dimensionless)"
-        legend_constants[13] = "Ko in component ionic_concentrations (millimolar)"
-        legend_constants[14] = "Ki in component ionic_concentrations (millimolar)"
-        legend_states[7] = "X in component time_dependent_potassium_current_X_gate (dimensionless)"
-        legend_algebraic[16] = "Xi in component time_dependent_potassium_current_Xi_gate (dimensionless)"
-        legend_algebraic[6] = "alpha_X in component time_dependent_potassium_current_X_gate (per_millisecond)"
-        legend_algebraic[13] = "beta_X in component time_dependent_potassium_current_X_gate (per_millisecond)"
-        legend_constants[21] = "E_K1 in component time_independent_potassium_current (millivolt)"
-        legend_constants[22] = "g_K1 in component time_independent_potassium_current (milliS_per_cm2)"
-        legend_algebraic[20] = "K1_infinity in component time_independent_potassium_current_K1_gate (dimensionless)"
-        legend_algebraic[18] = "alpha_K1 in component time_independent_potassium_current_K1_gate (per_millisecond)"
-        legend_algebraic[19] = "beta_K1 in component time_independent_potassium_current_K1_gate (per_millisecond)"
-        legend_constants[23] = "E_Kp in component plateau_potassium_current (millivolt)"
-        legend_constants[15] = "g_Kp in component plateau_potassium_current (milliS_per_cm2)"
-        legend_algebraic[22] = "Kp in component plateau_potassium_current (dimensionless)"
-        legend_constants[16] = "E_b in component background_current (millivolt)"
-        legend_constants[17] = "g_b in component background_current (milliS_per_cm2)"
-        legend_rates[0] = "d/dt V in component membrane (millivolt)"
-        legend_rates[1] = "d/dt m in component fast_sodium_current_m_gate (dimensionless)"
-        legend_rates[2] = "d/dt h in component fast_sodium_current_h_gate (dimensionless)"
-        legend_rates[3] = "d/dt j in component fast_sodium_current_j_gate (dimensionless)"
-        legend_rates[5] = "d/dt d in component slow_inward_current_d_gate (dimensionless)"
-        legend_rates[6] = "d/dt f in component slow_inward_current_f_gate (dimensionless)"
-        legend_rates[7] = "d/dt X in component time_dependent_potassium_current_X_gate (dimensionless)"
-        legend_rates[4] = "d/dt Cai in component intracellular_calcium_concentration (millimolar)"
+        legend_voi = "Time in component environment $(ms)$"
+        legend_states[0] = "$V$ in component membrane $(mV)$"
+        legend_constants[0] = "$R$ in component membrane $(J/kM/K)$"
+        legend_constants[1] = "$T$ in component membrane $(K)$"
+        legend_constants[2] = "$F$ in component membrane $(C/M)$"
+        legend_constants[3] = "$C$ in component membrane $(\mu F/cm^2)$"
+        legend_algebraic[0] = "$I_{stim}$ in component membrane $(\mu A/cm^2)$"
+        legend_algebraic[7] = "$i_{Na}$ in component fast sodium current $(\mu A/cm^2)$"
+        legend_algebraic[15] = "$i_{si}$ in component slow inward current $(\mu A/cm^2)$"
+        legend_algebraic[17] = "$i_K$ in component time dependent potassium current $(\mu A/cm^2)$"
+        legend_algebraic[21] = "$i_{K1}$ in component time independent potassium current $(\mu A/cm^2)$"
+        legend_algebraic[23] = "$i_{Kp}$ in component plateau potassium current $(\mu A/cm^2)$"
+        legend_algebraic[24] = "$i_b$ in component background current $(\mu A/cm^2)$"
+        legend_constants[4] = "stim start in component membrane $(ms)$"
+        legend_constants[5] = "stim end in component membrane $(ms)$"
+        legend_constants[6] = "stim period in component membrane $(ms)$"
+        legend_constants[7] = "stim duration in component membrane $(ms)$"
+        legend_constants[8] = "stim amplitude in component membrane $(\mu A/cm^2)$"
+        legend_constants[9] = "$g_{Na}$ in component fast sodium current $(mS/cm^2)$"
+        legend_constants[18] = "$E_{Na}$ in component fast sodium current $(mV)$"
+        legend_constants[10] = "$Nao$ in component ionic concentrations $(mM)$"
+        legend_constants[11] = "$Nai$ in component ionic concentrations $(mM)$"
+        legend_states[1] = "$m$ in component fast sodium current $m$ gate (dimensionless)"
+        legend_states[2] = "$h$ in component fast sodium current $h$ gate (dimensionless)"
+        legend_states[3] = "$j$ in component fast sodium current $j$ gate (dimensionless)"
+        legend_algebraic[1] = r"$\alpha_m$ in component fast sodium current $m$ gate $(ms^{-1})$"
+        legend_algebraic[8] = r"$\beta_m$ in component fast sodium current $m$ gate $(ms^{-1})$"
+        legend_algebraic[2] = r"$\alpha_h$ in component fast sodium current $h$ gate $(ms^{-1})$"
+        legend_algebraic[9] = r"$\beta_h$ in component fast sodium current $h$ gate $(ms^{-1})$"
+        legend_algebraic[3] = r"$\alpha_j$ in component fast sodium current $j$ gate $(ms^{-1})$"
+        legend_algebraic[10] = r"$\beta_j$ in component fast sodium current $j$ gate $(ms^{-1})$"
+        legend_algebraic[14] = "$E_{si}$ in component slow inward current $(mV)$"
+        legend_states[4] = "$Cai$ in component intracellular calcium concentration $(mM)$"
+        legend_states[5] = "$d$ in component slow inward current $d$ gate (dimensionless)"
+        legend_states[6] = "$f$ in component slow inward current $f$ gate (dimensionless)"
+        legend_algebraic[4] = r"$\alpha_d$ in component slow inward current $d$ gate $(ms^{-1})$"
+        legend_algebraic[11] = r"$\beta_d$ in component slow inward current $d$ gate $(ms^{-1})$"
+        legend_algebraic[5] = r"$\alpha_f$ in component slow inward current $f$ gate $(ms^{-1})$"
+        legend_algebraic[12] = r"$\beta_f$ in component slow inward current $f$ gate $(ms^{-1})$"
+        legend_constants[19] = "$g_K$ in component time dependent potassium current $(mS/cm^2)$"
+        legend_constants[20] = "$E_K$ in component time dependent potassium current $(mV)$"
+        legend_constants[12] = "$PR_{NaK}$ in component time dependent potassium current (dimensionless)"
+        legend_constants[13] = "$Ko$ in component ionic concentrations $(mM)$"
+        legend_constants[14] = "$Ki$ in component ionic concentrations $(mM)$"
+        legend_states[7] = "$X$ in component time dependent potassium current $X$ gate (dimensionless)"
+        legend_algebraic[16] = "$Xi$ in component time dependent potassium current $Xi$ gate (dimensionless)"
+        legend_algebraic[6] = r"$\alpha_X$ in component time dependent potassium current $X$ gate $(ms^{-1})$"
+        legend_algebraic[13] = r"$\beta_X$ in component time dependent potassium current $X$ gate $(ms^{-1})$"
+        legend_constants[21] = "$E_{K1}$ in component time independent potassium current $(mV)$"
+        legend_constants[22] = "$g_{K1}$ in component time independent potassium current $(mS/cm^2)$"
+        legend_algebraic[20] = "$K1_{infinity}$ in component time independent potassium current $K1$ gate (dimensionless)"
+        legend_algebraic[18] = r"$\alpha_K1$ in component time independent potassium current $K1$ gate $(ms^{-1})$"
+        legend_algebraic[19] = r"$\beta_K1$ in component time independent potassium current $K1$ gate $(ms^{-1})$"
+        legend_constants[23] = "$E_Kp$ in component plateau potassium current $(mV)$"
+        legend_constants[15] = "$g_Kp$ in component plateau potassium current $(mS/cm^2)$"
+        legend_algebraic[22] = "$Kp$ in component plateau potassium current (dimensionless)"
+        legend_constants[16] = "$E_b$ in component background current $(mV)$"
+        legend_constants[17] = "$g_b$ in component background current $(mS/cm^2)$"
+        legend_rates[0] = r"$\frac{d}{dt}$ V in component membrane $(mV)$"
+        legend_rates[1] = r"$\frac{d}{dt}$ $m$ in component fast sodium current $m$ gate (dimensionless)"
+        legend_rates[2] = r"$\frac{d}{dt}$ $h$ in component fast sodium current $h$ gate (dimensionless)"
+        legend_rates[3] = r"$\frac{d}{dt}$ $j$ in component fast sodium current $j$ gate (dimensionless)"
+        legend_rates[5] = r"$\frac{d}{dt}$ $d$ in component slow inward current $d$ gate (dimensionless)"
+        legend_rates[6] = r"$\frac{d}{dt}$ $f$ in component slow inward current $f$ gate (dimensionless)"
+        legend_rates[7] = r"$\frac{d}{dt}$ $X$ in component time dependent potassium current $X$ gate (dimensionless)"
+        legend_rates[4] = r"$\frac{d}{dt}$ $Cai$ in component intracellular calcium concentration $(mM)$"
         return (legend_states, legend_algebraic, legend_voi, legend_constants)
 
     def initConsts(self):
@@ -254,13 +253,21 @@ class LR91:
 
     def plot_model(self, voi, states, algebraic):
         """Plot variables against variable of integration"""
-        import pylab
-        (legend_states, legend_algebraic, legend_voi, legend_constants) = self.createLegends()
-        pylab.figure(1)
-        pylab.plot(voi, vstack((states, algebraic)).T)
-        pylab.xlabel(legend_voi)
-        pylab.legend(legend_states, loc='best')
-        pylab.show()
+        import matplotlib.pyplot as plt
+        legend_states, legend_algebraic, legend_voi, legend_constants = self.createLegends()
+        plt.figure(1, figsize=(14.8, 11.8))
+        ax = plt.subplot(111)
+        plt.plot(voi, states.T, linestyle='-')
+        plt.plot(voi, algebraic.T, linestyle='--')
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.5, box.height * 0.8])
+        plt.xlabel(legend_voi)
+        algebraic_legend = plt.legend(legend_algebraic, title="Algebraics", loc='lower right',
+                                      bbox_to_anchor=(2.14, -0.01))
+        states_legend = plt.legend(legend_states, title="Constants", loc='lower left', bbox_to_anchor=(-0.01, 1))
+        plt.gca().add_artist(algebraic_legend)
+        plt.gca().add_artist(states_legend)
+        plt.show()
 
 
 if __name__ == "__main__":

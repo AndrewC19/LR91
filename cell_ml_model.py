@@ -2,7 +2,16 @@
 SIZE_ALGEBRAIC = 25
 SIZE_STATES = 8
 SIZE_CONSTANTS = 24
+
+# Configuration of ODE solver
+START_TIME = 8000
+END_TIME = 8800
+TIME_STEPS = 800
+
+
+OUTPUT_PATH = "./data/results.csv"
 import matplotlib.pyplot as plt
+import pandas as pd
 from math import *
 from numpy import *
 
@@ -32,7 +41,7 @@ class LR91:
         self.G_b = random.uniform(0.0294, 0.0490)
 
 
-    def createLegends(self):
+    def create_legends(self):
         legend_states = [""] * SIZE_STATES
         legend_rates = [""] * SIZE_STATES
         legend_algebraic = [""] * SIZE_ALGEBRAIC
@@ -106,7 +115,7 @@ class LR91:
         legend_rates[4] = r"$\frac{d}{dt}$ $Cai$ in component intracellular calcium concentration $(mM)$"
         return (legend_states, legend_algebraic, legend_voi, legend_constants)
 
-    def initConsts(self):
+    def initialise_constants(self):
         constants = [0.0] * SIZE_CONSTANTS
         states = [0.0] * SIZE_STATES
         states[0] = -84.3801107371
@@ -144,7 +153,7 @@ class LR91:
         constants[23] = constants[21]
         return (states, constants)
 
-    def computeRates(self, voi, states, constants):
+    def compute_rates(self, voi, states, constants):
         rates = [0.0] * SIZE_STATES
         algebraic = [0.0] * SIZE_ALGEBRAIC
         algebraic[1] = (0.320000*(states[0]+47.1300))/(1.00000-exp(-0.100000*(states[0]+47.1300)))
@@ -182,7 +191,7 @@ class LR91:
         rates[0] = (-1.00000/constants[3])*(algebraic[0]+algebraic[7]+algebraic[15]+algebraic[17]+algebraic[21]+algebraic[23]+algebraic[24])
         return(rates)
 
-    def computeAlgebraic(self, constants, states, voi):
+    def compute_algebraic(self, constants, states, voi):
         algebraic = array([[0.0] * len(voi)] * SIZE_ALGEBRAIC)
         states = array(states)
         voi = array(voi)
@@ -213,43 +222,68 @@ class LR91:
         algebraic[24] = constants[17]*(states[0]-constants[16])
         return algebraic
 
-    def run_model(self, plot=True, sample_conductances=False, n_runs=1):
+    def run_model(self, plot=True, sample_conductances=False, n_runs=1, verbose=False):
         """
         Run the LR91 model.
         :param plot: Whether or not to produce a plot (boolean)
         :param sample_conductances: Whether or not to sample conductances (boolean)
-        :return:
+        :return: a dictionary of model run data, including inputs, voi, states, and algebraic values
         """
         model_runs = {}
         for n_run in range(n_runs):
+            if verbose:
+                print(f"Model run {n_run+1}/{n_runs}")
             if sample_conductances:
                 self.sample_conductances()
             voi, states, algebraic = self.solve_model()
-            model_runs[n_run] = {"voi": voi, "states": states, "algebraic": algebraic}
+            model_runs[n_run] = {"G_Na": self.G_Na, "G_si": self.G_si, "G_K": self.G_K, "G_K1": self.G_K1,
+                                 "G_Kp": self.G_Kp, "G_b": self.G_b, "voi": voi, "states": states,
+                                 "algebraic": algebraic}
+        model_results = self.compute_voltage_outputs(model_runs)
+        self.save_results(model_results)
         if plot:
             # self.plot_model(voi, states, algebraic)
-            self.plot_voltage_from_model_runs(model_runs)
-            return model_runs
+            self.plot_voltage_from_model_runs(model_runs, model_results, plot_model_results=True)
+        return model_runs
+
+    def compute_voltage_outputs(self, model_runs):
+        model_results = {}
+        for model_run, run_results in model_runs.items():
+            model_results[model_run] = {key: run_results[key] for key in run_results if key not in ["voi", "states",
+                                                                                                    "algebraic"]}
+            model_results[model_run]['max_voltage'] = self.compute_max_voltage(run_results)
+            model_results[model_run]['rest_voltage'] = self.compute_rest_voltage(run_results)
+            model_results[model_run]['max_voltage_gradient'] = self.compute_max_voltage_gradient(run_results)
+            model_results[model_run]['dome_voltage'] = self.compute_dome_voltage(run_results)
+            model_results[model_run]['APD50'] = self.compute_APDx(run_results, model_results[model_run]['rest_voltage'],
+                                                                  model_results[model_run]['max_voltage'], 50)
+            model_results[model_run]['APD90'] = self.compute_APDx(run_results, model_results[model_run]['rest_voltage'],
+                                                                  model_results[model_run]['max_voltage'], 90)
+        return model_results
+
+    def save_results(self, model_results):
+        model_results_df = pd.DataFrame.from_dict(model_results, orient='index')
+        model_results_df.to_csv(OUTPUT_PATH)
 
     def solve_model(self):
-        """Solve model with ODE solver"""
+        """ Solve model with ODE solver. """
         from scipy.integrate import ode
         # Initialise constants and state variables
-        (init_states, constants) = self.initConsts()
+        init_states, constants = self.initialise_constants()
 
         # Set timespan to solve over
-        voi = linspace(8000, 8800, 500)
+        voi = linspace(START_TIME, END_TIME, TIME_STEPS)
 
         # Construct ODE object to solve
-        r = ode(self.computeRates)
+        r = ode(self.compute_rates)
         r.set_integrator('vode', method='bdf', atol=1e-06, rtol=1e-06, max_step=1)
         r.set_initial_value(init_states, voi[0])
         r.set_f_params(constants)
 
         # Solve model
         states = array([[0.0] * len(voi)] * SIZE_STATES)
-        states[:,0] = init_states
-        for (i,t) in enumerate(voi[1:]):
+        states[:, 0] = init_states
+        for (i, t) in enumerate(voi[1:]):
             if r.successful():
                 r.integrate(t)
                 states[:,i+1] = r.y
@@ -257,13 +291,18 @@ class LR91:
                 break
 
         # Compute algebraic variables
-        algebraic = self.computeAlgebraic(constants, states, voi)
-        return (voi, states, algebraic)
+        algebraic = self.compute_algebraic(constants, states, voi)
+        return voi, states, algebraic
 
     def plot_model(self, voi, states, algebraic):
-        """ Plot variables against variable of integration. """
+        """
+        Plot variables against variable of integration.
+        :param voi: Variables of integration.
+        :param states: State variables.
+        :param algebraic: Algebraic variables.
+        """
 
-        legend_states, legend_algebraic, legend_voi, legend_constants = self.createLegends()
+        legend_states, legend_algebraic, legend_voi, legend_constants = self.create_legends()
         plt.figure(1, figsize=(14.8, 11.8))
         ax = plt.subplot(111)
         plt.plot(voi, states.T, linestyle='-')
@@ -278,20 +317,88 @@ class LR91:
         plt.gca().add_artist(states_legend)
         plt.show()
 
-    def plot_voltage_from_model_runs(self, model_runs):
-        """ Plot voltage against variable of integration. """
+    @staticmethod
+    def plot_voltage_from_model_runs(model_runs, model_results, plot_model_results=False):
+        """
+        Plot voltage against variable of integration.
+        :param model_runs: A dictionary of individual model runs.
+        """
+
         plt.figure()
         for model_run, run_results in model_runs.items():
             xs = run_results["voi"]
             ys = run_results["states"][0].T
-            plt.plot(xs, ys, color='b', alpha=.2)
+            plt.plot(xs, ys, color='b', alpha=.8)
+            if plot_model_results:
+                dome_voltage = model_results[model_run]["dome_voltage"]
+                max_voltage = model_results[model_run]["max_voltage"]
+                rest_voltage = model_results[model_run]["rest_voltage"]
+                action_potential = max_voltage - rest_voltage
+                apd_50 = model_results[model_run]["APD50"]
+                apd_90 = model_results[model_run]["APD90"]
+                max_voltage_time = list(run_results["states"][0].T).index(max_voltage)
+                apd_50s = xs[max_voltage_time:max_voltage_time + apd_50]
+                apd_90s = xs[max_voltage_time:max_voltage_time + apd_90]
+                plt.plot(xs, [dome_voltage]*len(ys), color='r', linestyle='--', alpha=.3, label="Dome Voltage")
+                plt.plot(xs, [max_voltage]*len(ys), color='g', linestyle='--', alpha=.3, label="Max Voltage")
+                plt.plot(xs, [rest_voltage]*len(ys), color='black', linestyle='--', alpha=.3, label="Rest Voltage")
+
+                plt.plot(apd_50s, [max_voltage - (action_potential * .5)]*apd_50, color='purple', linestyle='--',
+                         alpha=1, label="APD50", markevery=[0, -1], marker="|")
+                plt.plot(apd_90s, [max_voltage - (action_potential * .9)]*apd_90, color='orange', linestyle='--',
+                         alpha=1, label="APD90", markevery=[0, -1], marker="|")
         plt.xlabel(r"Time $ms$")
         plt.ylabel(r"Voltage $(mV)$")
         plt.legend()
         plt.show()
         plt.tight_layout()
 
+    @staticmethod
+    def compute_max_voltage(model_run):
+        return max(model_run["states"][0].T)
+
+    @staticmethod
+    def compute_dome_voltage(model_run):
+        voltage_derivatives = gradient(model_run["states"][0].T)
+        candidate_turning_points = []
+        for i in range(2, len(voltage_derivatives)-2):
+            # Find dome turning point: \_/ left neighbour is negative, right neighbour is positive, turning point must
+            # be roughly 0
+            if voltage_derivatives[i-2] < 0 and voltage_derivatives[i+2] > 0 and abs(voltage_derivatives[i]) < 0.1:
+                candidate_turning_points.append(i)
+        candidate_turning_points = [i for i in candidate_turning_points if model_run["states"][0].T[i] > 0]
+        turning_point = list(voltage_derivatives).index(min(voltage_derivatives[candidate_turning_points]))
+        dome_voltage = model_run["states"][0].T[turning_point]
+        return dome_voltage
+
+    @staticmethod
+    def compute_APDx(model_run, rest_voltage, max_voltage, percentage):
+        """
+        Compute the action potential duration to x%. That is, the amount of time until the max voltage falls by
+        x%.
+        :param model_run: A dictionary of model runs, each containing states, algebraics, and voi.
+        :param max_voltage: The max voltage (spike point).
+        :param percentage: The percentage of action potential to measure duration to fall to.
+        :return: Duration of peak AP to x% APD.
+        """
+        voltages = model_run["states"][0].T
+        action_potential = max_voltage - rest_voltage
+        action_potential_x = action_potential * (percentage/100)
+        voltage_x = max_voltage - action_potential_x
+        closest_to_voltage_x = min(voltages, key=lambda v: abs(v - voltage_x))
+        duration = abs(list(voltages).index(closest_to_voltage_x) - list(voltages).index(max_voltage))
+        return duration
+
+    @staticmethod
+    def compute_max_voltage_gradient(model_run):
+        voltage_derivatives = gradient(model_run["states"][0].T)
+        return max(voltage_derivatives)
+
+    @staticmethod
+    def compute_rest_voltage(model_run):
+        return model_run["states"][0].T[0]
+
 
 if __name__ == "__main__":
     model = LR91()
-    results = model.run_model(plot=True, sample_conductances=True, n_runs=5)
+    results = model.run_model(plot=True, sample_conductances=True, n_runs=1, verbose=True)

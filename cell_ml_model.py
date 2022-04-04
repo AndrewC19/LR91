@@ -423,6 +423,7 @@ class LR91:
             # be roughly 0
             # TODO: Fix Dome Voltage to find /-\
             if voltage_derivatives[i - 2] > 0 and voltage_derivatives[i + 2] < 0 and abs(voltage_derivatives[i]) < 0.1:
+                print(f"Voltage Derivative: {voltage_derivatives[i]}")
                 candidate_turning_points.append(i)
         candidate_turning_points = [i for i in candidate_turning_points if model_run["states"][0].T[i] > 0]
         turning_point = list(voltage_derivatives).index(min(voltage_derivatives[candidate_turning_points]))
@@ -463,5 +464,8 @@ class LR91:
 
 if __name__ == "__main__":
     model = LR91()
-    results = model.run_model(plot=True, sample_conductances=True, n_runs=1, verbose=True,
+    results = model.run_model(plot=True,
+                              sample_conductances=True,
+                              n_runs=1,
+                              verbose=True,
                               detailed_plot=True)

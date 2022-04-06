@@ -11,6 +11,8 @@ TIME_STEPS = 10000
 OUTPUT_PATH = "./data/results.csv"
 import matplotlib.pyplot as plt
 import pandas as pd
+import lhsmdu
+import scipy.stats.distributions as ssd
 from math import *
 from numpy import *
 
@@ -35,7 +37,7 @@ class LR91:
         self.G_Kp = 0.01830
         self.G_b = 0.03921
 
-    def sample_conductances(self):
+    def sample_conductances(self, n_runs, latin_hypercube_sampling=True):
         """ Sample the conductance input parameter values uniformly from the design data distributions specified in
             (Chang, Strong, and Clayton, 2015), Table 1 [1].
 
@@ -44,12 +46,36 @@ class LR91:
                 PloS one, 10(6), p.e0130252.
                 https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130252
         """
-        self.G_Na = random.uniform(17.250, 28.750)
-        self.G_si = random.uniform(0.0675, 0.1125)
-        self.G_K = random.uniform(0.2115, 0.3525)
-        self.G_K1 = random.uniform(0.4535, 0.7559)
-        self.G_Kp = random.uniform(0.0137, 0.0229)
-        self.G_b = random.uniform(0.0294, 0.0490)
+        sampled_conductances = {'G_Na': [], 'G_si': [], 'G_K': [],
+                                'G_K1': [], 'G_Kp': [], 'G_b': []}
+        if latin_hypercube_sampling:
+            sample = lhsmdu.sample(len(sampled_conductances), n_runs)
+            sampled_conductances['G_Na'] = list(lhsmdu.inverseTransformSample(ssd.uniform(23.0000-(23.0000/4),
+                                                                                          23.0000/2),
+                                                                              sample[0]))[0]
+            sampled_conductances['G_si'] = list(lhsmdu.inverseTransformSample(ssd.uniform(0.09000-(0.09000/4),
+                                                                                          0.09000/2),
+                                                                              sample[1]))[0]
+            sampled_conductances['G_K'] = list(lhsmdu.inverseTransformSample(ssd.uniform(0.28200-(0.28200/4),
+                                                                                         0.28200/2),
+                                                                             sample[2]))[0]
+            sampled_conductances['G_K1'] = list(lhsmdu.inverseTransformSample(ssd.uniform(0.60470-(0.60470/4),
+                                                                                          0.60470/2),
+                                                                              sample[3]))[0]
+            sampled_conductances['G_Kp'] = list(lhsmdu.inverseTransformSample(ssd.uniform(0.01830-(0.01830/4),
+                                                                                          0.01830/2),
+                                                                              sample[4]))[0]
+            sampled_conductances['G_b'] = list(lhsmdu.inverseTransformSample(ssd.uniform(0.03921-(0.03921/4),
+                                                                                         0.03921/2),
+                                                                             sample[5]))[0]
+        else:
+            sampled_conductances['G_Na'] = random.uniform(17.250, 28.750, n_runs)
+            sampled_conductances['G_si'] = random.uniform(0.0675, 0.1125, n_runs)
+            sampled_conductances['G_K'] = random.uniform(0.2115, 0.3525, n_runs)
+            sampled_conductances['G_K1'] = random.uniform(0.4535, 0.7559, n_runs)
+            sampled_conductances['G_Kp'] = random.uniform(0.0137, 0.0229, n_runs)
+            sampled_conductances['G_b'] = random.uniform(0.0294, 0.0490, n_runs)
+        return sampled_conductances
 
     def create_legends(self):
         legend_states = [""] * SIZE_STATES
@@ -278,24 +304,34 @@ class LR91:
         algebraic[24] = constants[17] * (states[0] - constants[16])
         return algebraic
 
-    def run_model(self, plot=True, sample_conductances=False, n_runs=1, verbose=False, detailed_plot=False):
+    def run_model(self, plot=True, sample_conductances=False, n_runs=1, latin_hypercube_sampling=False,
+                  verbose=False, detailed_plot=False):
         """
         Run the LR91 model.
         :param verbose: Whether or not to print verbose details (model run progress).
         :param n_runs: Number of model runs.
+        :param latin_hypercube_sampling: Whether or not to use latin hyper cube sampling (boolean).
         :param plot: Whether or not to produce a plot (boolean)
         :param sample_conductances: Whether or not to sample conductances (boolean)
         :return: a dictionary of model run data, including inputs, voi, states, and algebraic values
         """
         model_runs = {}
+        if sample_conductances:
+            sampled_conductances_dict = self.sample_conductances(n_runs, latin_hypercube_sampling)
         for n_run in range(n_runs):
             if verbose:
                 print(f"Model run {n_run + 1}/{n_runs}")
-            if sample_conductances:
-                self.sample_conductances()
+            if sample_conductances:  # Use sampled conductance
+                self.G_Na = sampled_conductances_dict['G_Na'][n_run]
+                self.G_si = sampled_conductances_dict['G_si'][n_run]
+                self.G_K = sampled_conductances_dict['G_K'][n_run]
+                self.G_K1 = sampled_conductances_dict['G_K1'][n_run]
+                self.G_Kp = sampled_conductances_dict['G_Kp'][n_run]
+                self.G_b = sampled_conductances_dict['G_b'][n_run]
             voi, states, algebraic = self.solve_model()
-            model_runs[n_run] = {"G_Na": self.G_Na, "G_si": self.G_si, "G_K": self.G_K, "G_K1": self.G_K1,
-                                 "G_Kp": self.G_Kp, "G_b": self.G_b, "voi": voi, "states": states,
+            model_runs[n_run] = {"G_Na": self.G_Na, "G_si": self.G_si, "G_K": self.G_K,
+                                 "G_K1": self.G_K1, "G_Kp": self.G_Kp, "G_b": self.G_b,
+                                 "voi": voi, "states": states,
                                  "algebraic": algebraic}
         model_results = self.compute_voltage_outputs(model_runs)
         save_results(model_results)
@@ -421,9 +457,8 @@ class LR91:
         for i in range(2, len(voltage_derivatives) - 2):
             # Find dome turning point: \_/ left neighbour is negative, right neighbour is positive, turning point must
             # be roughly 0
-            # TODO: Fix Dome Voltage to find /-\
+
             if voltage_derivatives[i - 2] > 0 and voltage_derivatives[i + 2] < 0 and abs(voltage_derivatives[i]) < 0.1:
-                print(f"Voltage Derivative: {voltage_derivatives[i]}")
                 candidate_turning_points.append(i)
         candidate_turning_points = [i for i in candidate_turning_points if model_run["states"][0].T[i] > 0]
         turning_point = list(voltage_derivatives).index(min(voltage_derivatives[candidate_turning_points]))
@@ -444,8 +479,10 @@ class LR91:
         action_potential = max_voltage - rest_voltage
         action_potential_x = action_potential * (percentage / 100)
         voltage_x = max_voltage - action_potential_x
-        closest_to_voltage_x = min(voltages, key=lambda v: abs(v - voltage_x))
-        duration_time_steps = abs(list(voltages).index(closest_to_voltage_x) - list(voltages).index(max_voltage))
+        max_voltage_time_step = list(voltages).index(max_voltage)
+        voltages_after_max_voltage = list(voltages)[max_voltage_time_step:]
+        closest_to_voltage_x = min(voltages_after_max_voltage, key=lambda v: abs(v - voltage_x))
+        duration_time_steps = voltages_after_max_voltage.index(closest_to_voltage_x)
         duration_ms = int(duration_time_steps * ((END_TIME - START_TIME) / TIME_STEPS))
         print(duration_time_steps, duration_ms)
         return duration_ms
@@ -466,6 +503,7 @@ if __name__ == "__main__":
     model = LR91()
     results = model.run_model(plot=True,
                               sample_conductances=True,
-                              n_runs=1,
+                              n_runs=200,
+                              latin_hypercube_sampling=True,
                               verbose=True,
-                              detailed_plot=True)
+                              detailed_plot=False)

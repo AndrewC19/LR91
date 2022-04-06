@@ -227,7 +227,7 @@ class LR91:
                     1.00000 + exp(-0.0400000 * (states[0] + 20.0000)))
         rates[7] = algebraic[6] * (1.00000 - states[7]) - algebraic[13] * states[7]
         algebraic[14] = 7.70000 - 13.0287 * log(states[4] / 1.00000)
-        algebraic[15] = 0.0900000 * states[5] * states[6] * (states[0] - algebraic[14])
+        algebraic[15] = self.G_si * states[5] * states[6] * (states[0] - algebraic[14])
         rates[4] = (-0.000100000 / 1.00000) * algebraic[15] + 0.0700000 * (0.000100000 - states[4])
         algebraic[0] = custom_piecewise([greater_equal(voi, constants[4]) & less_equal(voi, constants[5]) & less_equal(
             (voi - constants[4]) - floor((voi - constants[4]) / constants[6]) * constants[6], constants[7]),
@@ -283,7 +283,7 @@ class LR91:
         algebraic[13] = (0.00130000 * exp(-0.0600000 * (states[0] + 20.0000))) / (
                     1.00000 + exp(-0.0400000 * (states[0] + 20.0000)))
         algebraic[14] = 7.70000 - 13.0287 * log(states[4] / 1.00000)
-        algebraic[15] = 0.0900000 * states[5] * states[6] * (states[0] - algebraic[14])
+        algebraic[15] = self.G_si * states[5] * states[6] * (states[0] - algebraic[14])
         algebraic[0] = custom_piecewise([greater_equal(voi, constants[4]) & less_equal(voi, constants[5]) & less_equal(
             (voi - constants[4]) - floor((voi - constants[4]) / constants[6]) * constants[6], constants[7]),
                                          constants[8], True, 0.00000])
@@ -503,7 +503,7 @@ if __name__ == "__main__":
     model = LR91()
     results = model.run_model(plot=True,
                               sample_conductances=True,
-                              n_runs=200,
+                              n_runs=1,
                               latin_hypercube_sampling=True,
                               verbose=True,
-                              detailed_plot=False)
+                              detailed_plot=True)
